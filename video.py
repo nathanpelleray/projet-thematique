@@ -25,14 +25,15 @@ class Thread(QThread):
         previous_time = time.time()
         while True:
             current_time = time.time()
-            dt = previous_time - current_time
+            dt = current_time - previous_time
             previous_time = current_time
 
-            ret, frame = self.cam.read()
-            results = self.reader.readtext(frame,  canvas_size=360, text_threshold=0.3, link_threshold=0.3, low_text=0.3)
+            print(1/dt)
 
-            cv2.putText(frame, f'FPS: {1 / dt}', (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            ret, frame = self.cam.read()
+
+            ########## VERSION 1 ##########
+            results = self.reader.readtext(frame,  canvas_size=360, text_threshold=0.3, link_threshold=0.3, low_text=0.3)
 
             for (bbox, text, prob) in results:
                 if text.isdigit():
@@ -47,6 +48,23 @@ class Thread(QThread):
                     cv2.rectangle(frame, tl, br, (0, 255, 0), 2)
                     cv2.putText(frame, text, (tl[0], tl[1] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+            ########## VERSION 2 ##########
+            # results, _ = self.reader.detect(frame, canvas_size=360, text_threshold=0.4, link_threshold=0.4, low_text=0.4)
+
+            # for rect in results[0]:
+            #     x_min = rect[0]
+            #     x_max = rect[1]
+            #     y_min = rect[2]
+            #     y_max = rect[3]
+
+            #     cropped_image = frame[y_min:y_max, x_min:x_max]
+
+            #     text_data = self.reader.recognize(cropped_image)
+            #     text_text = self.cleanup_text(text_data[0][1])
+
+            #     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            #     cv2.putText(frame, text_text, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
             # Reading the image in RGB to display it
             color_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
