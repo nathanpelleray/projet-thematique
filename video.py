@@ -2,13 +2,9 @@ import cv2
 import sys
 import time
 from easyocr import Reader
-from PySide6.QtCore import Qt, QThread, Signal, Slot
-
-from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap
-
-from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox,
-                               QHBoxLayout, QLabel, QMainWindow, QPushButton,
-                               QSizePolicy, QVBoxLayout, QWidget)
+from PySide6.QtCore import QThread, Signal, Slot
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (QApplication, QLabel, QMainWindow)
 
 
 
