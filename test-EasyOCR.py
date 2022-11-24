@@ -1,6 +1,7 @@
 from easyocr import Reader
 import cv2
 from matplotlib import pyplot as plt
+import time
 
 
 def cleanup_text(text):
@@ -8,10 +9,12 @@ def cleanup_text(text):
 	# using OpenCV
 	return "".join([c if ord(c) < 128 else "" for c in text]).strip()
 
-image = cv2.imread("coureur.jpg")
+image = cv2.imread("data/coureur.jpg")
+
+start = time.time()
 
 reader = Reader(["fr"])
-results = reader.readtext(image)
+results = reader.readtext(image, canvas_size=360, text_threshold=0.4, link_threshold=0.4, low_text=0.4)
 
 for (bbox, text, prob) in results:
 	(tl, tr, br, bl) = bbox
@@ -26,7 +29,9 @@ for (bbox, text, prob) in results:
 	cv2.putText(image, text, (tl[0], tl[1] - 10),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
+end = time.time()
+
+print(f'time : {end - start}')
+
 plt.imshow(image)
 plt.show()
-cv2.waitKey(0)
-cv2.destroyAllWindows()
