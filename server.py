@@ -2,10 +2,10 @@ import socket
 import pickle
 import cv2
 import threading
-import matplotlib.pyplot as plt
 import time
 import uuid
 import os
+import datetime
 
 from easyocr import Reader
 
@@ -21,18 +21,19 @@ def remove_image(name):
 
 def get_image(name):
     image = cv2.imread(f'/tmp/{name}.png')
+    creation_date = int(os.path.getctime(f'/tmp/{name}.png'))
     remove_image(name)
-    return image
+    return image, creation_date
 
 
 def thread_function():
-    while True:
-        time.sleep(0.1)
+    while not fin or len(images_list):
+        time.sleep(0.01)
         lock.acquire()
         if images_list:
-            image = get_image(images_list.pop(0))
+            image, creation_date = get_image(images_list.pop(0))
             lock.release()
-            image_process(image)
+            image_process(image, creation_date)
             continue
         lock.release()
 
@@ -41,7 +42,7 @@ def cleanup_text(text):
 	return "".join([c if ord(c) < 128 else "" for c in text]).strip()
 
 
-def bib_process(bib_number, image):
+def bib_process(bib_number, image, creation_date):
     # Create bib
     if bib_number not in bibs_dict:
         bibs_dict[bib_number] = {
@@ -57,7 +58,7 @@ def bib_process(bib_number, image):
     # Send image
     if bibs_dict[bib_number]['iter_number'] >= ITER_NUMBER:
         bibs_dict[bib_number]['iter_number'] = 0
-        print(f'Send picture {bib_number}')
+        print(f'Send picture {bib_number} | creation date {datetime.datetime.fromtimestamp(creation_date)}')
 
     # Supp bib
     bibs_keys = list(bibs_dict.keys())
@@ -68,7 +69,7 @@ def bib_process(bib_number, image):
                 bibs_dict.pop(key)
 
 
-def image_process(orig_image):
+def image_process(orig_image, creation_date):
     # Calculate ratio
     ratio = orig_image.shape[1] / 400
 
@@ -84,34 +85,44 @@ def image_process(orig_image):
 
             if text.isdigit():
                 lock.acquire()
-                bib_process(text, orig_image)
+                bib_process(text, orig_image, creation_date)
                 lock.release()
 
 
 images_list = []
 bibs_dict = {}
+number_of_image = 0
+fin = False
 
 # Init thread
 lock = threading.RLock()
-threading.Thread(target=thread_function).start()
+thread = threading.Thread(target=thread_function)
+thread.start()
 
 # Init reader
 reader = Reader(["fr"])
 
 # Start socket
 s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-s.bind(('127.0.0.1',8100))
+s.bind(('',8100))
 s.listen(10)
 
 # Wait connection
 conn,addr=s.accept()
+
+# Calculate process time
+start_time = time.time()
 
 while True:
     # Receive image information
     picture_info = conn.recv(4096)
 
     # Information processing
-    image_size = int(picture_info[:HEADERSIZE])
+    try:
+        image_size = int(picture_info[:HEADERSIZE])
+    except:
+        fin = True
+        break
     people_positions = pickle.loads(picture_info[HEADERSIZE+1:])
 
     # Valide reception
@@ -127,10 +138,20 @@ while True:
     orig_image = cv2.imdecode(frame, cv2.IMREAD_COLOR)
 
     lock.acquire()
+    number_of_image += 1
     unique_name = uuid.uuid4().hex
     cv2.imwrite(f'/tmp/{unique_name}.png', orig_image)
     images_list.append(unique_name)
     lock.release()
 
+# Wait end of process
+thread.join()
+
+# Calculate process time
+end_time = time.time()
+print(f'Process time: {end_time - start_time}s')
+print(f'Number images processing: {number_of_image}')
+
 # Close socket
+conn.close()
 s.close()

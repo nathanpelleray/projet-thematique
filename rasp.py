@@ -17,15 +17,16 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 # Start socket 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect(('127.0.0.1', 8100))
+client_socket.connect(('192.168.1.23', 8100))
 
 # Init camera
-cam = cv2.VideoCapture('data/video_test.mp4')
+cam = cv2.VideoCapture('data/benchmark.mp4')
 if cam.isOpened() == False:
     print("Error")
 
+ret = True
 previous_time = time.time()
-while True:
+while ret:
     current_time = time.time()
     dt = current_time - previous_time
     previous_time = current_time
@@ -34,7 +35,12 @@ while True:
 
     # Image
     ret, image = cam.read()
-    ratio = image.shape[1] / 400
+
+    try:
+        ratio = image.shape[1] / 400
+    except:
+        break
+
     orig_image = image.copy()
 
     # Resize image
@@ -59,13 +65,18 @@ while True:
         size = len(data)
         people_positions_data = pickle.dumps(people_positions)
         msg = bytes(f"{size:<{HEADERSIZE}};", 'utf-8')+people_positions_data
+        print('send info')
         client_socket.send(msg)
 
         # Check reception
+        print('recv')
         response = client_socket.recv(255).decode('utf-8')
         if response == 'OK':
             # Send image
+            print('send data')
             client_socket.sendall(data)
+
+client_socket.send('FIN'.encode('utf-8'))
 
 # Close socket
 client_socket.close()
