@@ -43,22 +43,31 @@ def cleanup_text(text):
 
 
 def bib_process(bib_number, image, creation_date):
-    # Create bib
-    if bib_number not in bibs_dict:
-        bibs_dict[bib_number] = {
-            'iter_number': 1,
-            'last_time': 0,
-            'image': image
-        }
+    # Not pass
+    if not bib_number in past_bibs:
+        # Create bib
+        if bib_number not in bibs_dict:
+            bibs_dict[bib_number] = {
+                'iter_number': 1,
+                'last_time': 0,
+                'image': image
+            }
 
-    # Update bib data
-    bibs_dict[bib_number]['iter_number'] += 1
-    bibs_dict[bib_number]['last_time'] = 0
+        # Update bib data
+        bibs_dict[bib_number]['iter_number'] += 1
+        bibs_dict[bib_number]['last_time'] = 0
 
-    # Send image
-    if bibs_dict[bib_number]['iter_number'] >= ITER_NUMBER:
-        bibs_dict[bib_number]['iter_number'] = 0
-        print(f'Send picture {bib_number} | creation date {datetime.datetime.fromtimestamp(creation_date)}')
+        # Send image
+        if bibs_dict[bib_number]['iter_number'] >= ITER_NUMBER:
+            print(f'Send picture {bib_number} | creation date {datetime.datetime.fromtimestamp(creation_date)}')
+
+            # Save image (temporary)
+            unique_name = uuid.uuid4().hex
+            cv2.imwrite(f'/tmp/{unique_name}.png', bibs_dict[bib_number]['image'])
+
+            # Update data
+            past_bibs.append(bib_number)
+            bibs_dict.pop(bib_number)
 
     # Supp bib
     bibs_keys = list(bibs_dict.keys())
@@ -91,6 +100,7 @@ def image_process(orig_image, creation_date):
 
 images_list = []
 bibs_dict = {}
+past_bibs = []
 number_of_image = 0
 fin = False
 

@@ -5,11 +5,20 @@ import pickle
 import numpy as np
 import time
 
+import signal
+
 from imutils.object_detection import non_max_suppression
 
 
 HEADERSIZE = 15
 
+
+def handler(signum, frame):
+    ret = False
+
+
+# Init signal for close
+signal.signal(signal.SIGINT, handler)
 
 # Init hog detection
 hog = cv2.HOGDescriptor()
@@ -20,7 +29,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect(('192.168.1.23', 8100))
 
 # Init camera
-cam = cv2.VideoCapture('data/benchmark.mp4')
+cam = cv2.VideoCapture('http://192.168.1.239:5555/video')
 if cam.isOpened() == False:
     print("Error")
 
@@ -35,12 +44,10 @@ while ret:
 
     # Image
     ret, image = cam.read()
-
     try:
         ratio = image.shape[1] / 400
     except:
         break
-
     orig_image = image.copy()
 
     # Resize image
